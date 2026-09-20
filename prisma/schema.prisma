@@ -1,0 +1,84 @@
+// This file describes every "table" our database has, and how they connect
+// to each other. Run `npx prisma migrate dev` after editing this to update
+// the real database to match.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// The three permission levels a person can have inside an organization.
+// ADMIN    - manage team members, change plan, full control
+// MEMBER   - create/edit/delete tasks, but can't manage the team or billing
+// VIEWER   - read-only access, cannot change anything
+enum Role {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+// The subscription tier of an organization (this is what "feature gating"
+// checks against - see lib/plans.js).
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+}
+
+// A "tenant" in our multi-tenant app. Every team/company using the product
+// gets one Organization. All data (tasks, members) is scoped to one.
+model Organization {
+  id          String       @id @default(cuid())
+  name        String
+  plan        Plan         @default(FREE)
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  tasks       Task[]
+}
+
+// The "join table" connecting a User to an Organization, with a Role
+// attached. A single user can belong to MULTIPLE organizations, each with
+// a different role (e.g. Admin of one team, Viewer on another).
+model Membership {
+  id             String       @id @default(cuid())
+  role           Role         @default(MEMBER)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, organizationId])
+}
+
+// Sample "product data" scoped per-tenant, used to power the analytics
+// dashboard (task counts by status, tasks created over time, etc).
+model Task {
+  id             String       @id @default(cuid())
+  title          String
+  status         TaskStatus   @default(TODO)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  createdBy      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
