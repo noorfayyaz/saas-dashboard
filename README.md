@@ -102,3 +102,5 @@ GitHub pe naya repo banayein, phir diye gaye commands (`git remote add origin...
 - Notes mein likhein: Multi-tenant architecture Membership join-table se, custom RBAC middleware, plan-based feature gating (member/task limits + locked analytics), Recharts se analytics dashboard.
 
 Koi bhi step pe error aaye, exact error message ya screenshot bhej dein — line-by-line fix bataunga.
+    
+    
